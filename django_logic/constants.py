@@ -7,4 +7,3 @@ class LogType(Enum):
     TRANSITION_IN_PROGRESS = 'transition_in_progress'
     TRANSITION_COMPLETED = 'transition_completed'
     TRANSITION_FAILED = 'transition_failed'
-
