@@ -1,5 +1,5 @@
 from django_logic.constants import LogType
-from django_logic.logger import logger
+from django_logic.logger import transition_logger as logger
 from django_logic.state import State
 
 
@@ -44,23 +44,26 @@ class Permissions(BaseCommand):
 class SideEffects(BaseCommand):
     def execute(self, state: State, **kwargs):
         """Side-effects execution"""
-        logger.info(f"{state.instance_key} side effects of '{self._transition.action_name}' started",
-                         log_type=LogType.TRANSITION_DEBUG,
-                         log_data=state.get_log_data())
         try:
             for command in self._commands:
+                logger.info(
+                    f'{self._transition.parent_id} {self._transition.tr_id} SideEffect {command.__name__}',
+                    extra={
+                        'parent_id': self._transition.parent_id, 
+                        'tr_id': self._transition.tr_id, 
+                        'activity': 'SideEffect', 
+                        'side_effect': command.__name__,
+                    }
+                )
                 command(state.instance, **kwargs)
         except Exception as error:
-            logger.info(f"{state.instance_key} side effects of '{self._transition.action_name}' failed "
-                             f"with {error}",
-                             log_type=LogType.TRANSITION_DEBUG,
-                             log_data=state.get_log_data())
-            logger.error(error, log_type=LogType.TRANSITION_ERROR, log_data=state.get_log_data())
+            logger.error(error,
+                extra={
+                    'parent_id': self._transition.parent_id, 
+                    'tr_id': self._transition.tr_id, 
+                })
             self._transition.fail_transition(state, error, **kwargs)
         else:
-            logger.info(f"{state.instance_key} side-effects of '{self._transition.action_name}' succeeded",
-                             log_type=LogType.TRANSITION_DEBUG,
-                             log_data=state.get_log_data())
             self._transition.complete_transition(state, **kwargs)
 
 
@@ -77,9 +80,15 @@ class Callbacks(BaseCommand):
                 command(state.instance, **kwargs)
         except Exception as error:
             logger.info(f"{state.instance_key} callbacks of '{self._transition.action_name}` failed with {error}",
-                             log_type=LogType.TRANSITION_DEBUG,
-                             log_data=state.get_log_data())
-            logger.error(error, log_type=LogType.TRANSITION_ERROR, log_data=state.get_log_data())
+                extra={
+                    'log_type': LogType.TRANSITION_DEBUG,
+                    'log_data': state.get_log_data()
+                })
+            logger.error(error,
+            extra={
+                'log_type': LogType.TRANSITION_ERROR,
+                'log_data': state.get_log_data()
+            })
 
 
 class NextTransition(object):

@@ -1,9 +1,10 @@
+import uuid
 from abc import ABC
 
 from django_logic.commands import SideEffects, Callbacks, Permissions, Conditions, NextTransition
 from django_logic.constants import LogType
 from django_logic.exceptions import TransitionNotAllowed
-from django_logic.logger import logger
+from django_logic.logger import transition_logger as logger
 from django_logic.state import State
 
 
@@ -71,6 +72,8 @@ class Transition(BaseTransition):
         self.permissions = self.permissions_class(kwargs.get('permissions', []), transition=self)
         self.conditions = self.conditions_class(kwargs.get('conditions', []), transition=self)
         self.next_transition = self.next_transition_class(kwargs.get('next_transition', None))
+        self.parent_id = kwargs.get('parent_id', None)   # always None, will be implemented later
+        self.tr_id = uuid.uuid4()
 
     def __str__(self):
         return f"Transition: {self.action_name} to {self.target}"
@@ -98,25 +101,33 @@ class Transition(BaseTransition):
         or `fail_transition` in case of failure.
         :param state: State object
         """
-        if state.is_locked():
-            logger.info(f'{state.instance_key} is locked',
-                             log_type=LogType.TRANSITION_DEBUG,
-                             log_data=state.get_log_data())
-            raise TransitionNotAllowed("State is locked")
+        logger.info(
+            f'{self.parent_id} {self.tr_id} Start None {self.action_name} {state.instance_key}',
+            extra={
+                'parent_id': self.parent_id, 
+                'tr_id': self.tr_id, 
+                'activity': 'Start', 
+                'process': state.process_name,
+                'transition': self.action_name,
+                'instance_key': state.instance_key,
+                'instance_pk': state.instance.pk,
+                'field_name': state.field_name,
+                'queryset_name': state.queryset_name,  # TODO: legacy?
+                'user': kwargs.get('user', None),  # user that triggered the transition
+            }
+        )
+        try:
+            if state.is_locked() or not state.lock():
+                raise TransitionNotAllowed("State is locked")
+        except TransitionNotAllowed as e:
+            logger.error(e, extra={'parent_id': self.parent_id, 'tr_id': self.tr_id})
+            raise e
+        else:
+            self._log_lock()
 
-        if not state.lock():
-            # in case of race conditions
-            raise TransitionNotAllowed("State is locked")
-
-        logger.info(f'{state.instance_key} has been locked',
-                         log_type=LogType.TRANSITION_DEBUG,
-                         log_data=state.get_log_data())
         if self.in_progress_state:
             state.set_state(self.in_progress_state)
-            log_data = state.get_log_data().update({'user': kwargs.get('user', None)})
-            logger.info(f'{state.instance_key} state changed to {self.in_progress_state}',
-                             log_type=LogType.TRANSITION_DEBUG,
-                             log_data=log_data)
+            self._log_set_state(self.in_progress_state)
 
         self._init_transition_context(kwargs)
         self.side_effects.execute(state, **kwargs)
@@ -128,15 +139,11 @@ class Transition(BaseTransition):
         :param state: State object
         """
         state.set_state(self.target)
-        log_data = state.get_log_data()
-        log_data.update({'user': kwargs.get('user', None)})
-        logger.info(f'{state.instance_key} state changed to {self.target}',
-                         log_type=LogType.TRANSITION_COMPLETED,
-                         log_data=log_data)
+        self._log_set_state(self.target)
+
         state.unlock()
-        logger.info(f'{state.instance_key} has been unlocked',
-                         log_type=LogType.TRANSITION_DEBUG,
-                         log_data=state.get_log_data())
+        self._log_unlock()
+
         self.callbacks.execute(state, **kwargs)
         self.next_transition.execute(state, **kwargs)
 
@@ -148,16 +155,42 @@ class Transition(BaseTransition):
         """
         if self.failed_state:
             state.set_state(self.failed_state)
-            log_data = state.get_log_data()
-            log_data.update({'user': kwargs.get('user', None)})
-            logger.info(f'{state.instance_key} state changed to {self.failed_state}',
-                             log_type=LogType.TRANSITION_FAILED,
-                             log_data=log_data)
+            self._log_set_state(self.failed_state)
+
         state.unlock()
-        logger.info(f'{state.instance_key} has been unlocked',
-                         log_type=LogType.TRANSITION_DEBUG,
-                         log_data=state.get_log_data())
+        self._log_unlock()
         self.failure_callbacks.execute(state, exception=exception, **kwargs)
+    
+    def _log_set_state(self, state: str):
+        logger.info(
+            f'{self.parent_id} {self.tr_id} Set State {state}',
+            extra={
+                'parent_id': self.parent_id, 
+                'tr_id': self.tr_id, 
+                'activity': 'Set State', 
+                'state': state,
+            }
+        )
+
+    def _log_lock(self):
+        logger.info(
+            f'{self.parent_id} {self.tr_id} Lock',
+            extra={
+                'parent_id': self.parent_id, 
+                'tr_id': self.tr_id, 
+                'activity': 'Lock', 
+            }
+        )
+
+    def _log_unlock(self):
+        logger.info(
+            f'{self.parent_id} {self.tr_id} Unlock',
+            extra={
+                'parent_id': self.parent_id, 
+                'tr_id': self.tr_id, 
+                'activity': 'Unlock', 
+            }
+        )
 
     @staticmethod
     def _init_transition_context(kwargs: dict) -> None:
