@@ -2,7 +2,6 @@ import uuid
 from abc import ABC
 
 from django_logic.commands import SideEffects, Callbacks, Permissions, Conditions, NextTransition
-from django_logic.constants import LogType
 from django_logic.exceptions import TransitionNotAllowed
 from django_logic.logger import transition_logger as logger
 from django_logic.state import State
@@ -107,7 +106,7 @@ class Transition(BaseTransition):
                 'parent_id': self.parent_id, 
                 'tr_id': self.tr_id, 
                 'activity': 'Start', 
-                'process': state.process_name,
+                'process_name': state.process_name,
                 'transition': self.action_name,
                 'instance_key': state.instance_key,
                 'instance_pk': state.instance.pk,

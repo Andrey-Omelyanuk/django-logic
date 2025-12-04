@@ -2,7 +2,6 @@ import warnings
 from functools import partial
 
 from django_logic.commands import Conditions, Permissions
-from django_logic.constants import LogType
 from django_logic.exceptions import TransitionNotAllowed
 from django_logic.logger import logger
 from django_logic.state import State
@@ -63,7 +62,7 @@ class Process(object):
             logger.info(f"{self.state.instance_key}, process {self.process_name} "
                              f"executes '{action_name}' transition from {self.state.cached_state} "
                              f"to {transition.target}",
-                             log_type=LogType.TRANSITION_DEBUG,
+                            #  log_type=LogType.TRANSITION_DEBUG,
                              log_data=self.state.get_log_data())
             return transition.change_state(self.state, **kwargs)
 
@@ -72,7 +71,7 @@ class Process(object):
                              f"transitions with action name '{action_name}'. "
                              f"Make sure to specify conditions and permissions accordingly to fix such case",
                 extra={
-                    'log_type': LogType.TRANSITION_DEBUG,
+                    # 'log_type': LogType.TRANSITION_DEBUG,
                     'log_data': self.state.get_log_data()
                 })
             raise TransitionNotAllowed("There are several transitions available")
@@ -80,7 +79,7 @@ class Process(object):
         logger.info(f"Process class {self.__class__} for object {self.instance.id} has no transition "
                          f"with action name {action_name}, user {user}",
                 extra={
-                    'log_type': LogType.TRANSITION_DEBUG,
+                    # 'log_type': LogType.TRANSITION_DEBUG,
                     'log_data': self.state.get_log_data()
                 })
         raise TransitionNotAllowed(f"Process class {self.__class__} for object {self.instance.id} has no transition "
