@@ -239,6 +239,6 @@ dmypy.json
 .idea/modules.xml
 .idea/vcs.xml
 
-# Dockerfile
-# makefile
+Dockerfile
+makefile
 /logs/
