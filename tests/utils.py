@@ -123,3 +123,50 @@ _setup_handler()
 def get_test_logger() -> ListLogger:
     """Get the global ListLogger instance for tests."""
     return _list_logger
+
+
+def assert_dict_contains(dict_a: Dict[str, Any], dict_b: Dict[str, Any]) -> bool:
+    """
+    Checks if dictionary A contains all keys from dictionary B with the same values.
+    
+    Args:
+        dict_a: Dictionary that may contain more keys
+        dict_b: Dictionary whose keys are used for comparison
+    
+    Returns:
+        True if dict_a contains all keys from dict_b with matching values, False otherwise
+    
+    Example usage:
+        def test_something(self):
+            obj_a = {'field1': 'value1', 'field2': 'value2', 'extra': 'extra'}
+            obj_b = {'field1': 'value1', 'field2': 'value2'}
+            self.assertTrue(assert_dict_contains(obj_a, obj_b))
+    """
+    # Check that all keys from B are present in A
+    missing_keys = set(dict_b.keys()) - set(dict_a.keys())
+    if missing_keys:
+        print(f"Missing keys in dict_a: {missing_keys}")
+        return False
+    
+    # Create a subset of A with keys from B
+    subset_a = {k: dict_a[k] for k in dict_b.keys()}
+    
+    # Compare the dictionaries and print differences
+    mismatches = []
+    for key in dict_b.keys():
+        if subset_a[key] != dict_b[key]:
+            mismatches.append({
+                'key': key,
+                'expected': dict_b[key],
+                'actual': subset_a[key]
+            })
+    
+    if mismatches:
+        print("Mismatched values:")
+        for mismatch in mismatches:
+            print(f"  Key '{mismatch['key']}':")
+            print(f"    Expected: {mismatch['expected']!r}")
+            print(f"    Actual:   {mismatch['actual']!r}")
+        return False
+    
+    return True
