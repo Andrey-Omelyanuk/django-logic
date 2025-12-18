@@ -1,5 +1,5 @@
 from django_logic.constants import LogType
-from django_logic.logger import get_logger
+from django_logic.logger import get_logger, transition_logger as logger
 from django_logic.state import State
 
 
@@ -10,6 +10,7 @@ class BaseCommand(object):
     def __init__(self, commands=None, transition=None):
         self._commands = commands or []
         self._transition = transition
+        # DEPRECATED
         self.logger = get_logger(module_name=__name__)
 
     @property
@@ -45,20 +46,36 @@ class Permissions(BaseCommand):
 class SideEffects(BaseCommand):
     def execute(self, state: State, **kwargs):
         """Side-effects execution"""
+        # DEPRECATED
         self.logger.info(f"{state.instance_key} side effects of '{self._transition.action_name}' started",
                          log_type=LogType.TRANSITION_DEBUG,
                          log_data=state.get_log_data())
         try:
             for command in self._commands:
+                logger.info(
+                    f'{kwargs.get("tr_id")} SideEffect {command.__name__}',
+                    extra={
+                        'tr_id': kwargs.get("tr_id"), 
+                        'activity': 'SideEffect', 
+                        'side_effect': command.__name__,
+                    }
+                )
                 command(state.instance, **kwargs)
         except Exception as error:
+            # DEPRECATED
             self.logger.info(f"{state.instance_key} side effects of '{self._transition.action_name}' failed "
                              f"with {error}",
                              log_type=LogType.TRANSITION_DEBUG,
                              log_data=state.get_log_data())
             self.logger.error(error, log_type=LogType.TRANSITION_ERROR, log_data=state.get_log_data())
+
+            logger.error(error,
+                extra={
+                    'tr_id': kwargs.get("tr_id"), 
+                })
             self._transition.fail_transition(state, error, **kwargs)
         else:
+            # DEPRECATED
             self.logger.info(f"{state.instance_key} side-effects of '{self._transition.action_name}' succeeded",
                              log_type=LogType.TRANSITION_DEBUG,
                              log_data=state.get_log_data())
@@ -77,10 +94,22 @@ class Callbacks(BaseCommand):
             for command in self.commands:
                 command(state.instance, **kwargs)
         except Exception as error:
+            # DEPRECATED
             self.logger.info(f"{state.instance_key} callbacks of '{self._transition.action_name}` failed with {error}",
                              log_type=LogType.TRANSITION_DEBUG,
                              log_data=state.get_log_data())
             self.logger.error(error, log_type=LogType.TRANSITION_ERROR, log_data=state.get_log_data())
+
+            logger.info(f"{state.instance_key} callbacks of '{self._transition.action_name}` failed with {error}",
+                extra={
+                    # 'log_type': LogType.TRANSITION_DEBUG,
+                    'log_data': state.get_log_data()
+                })
+            logger.error(error,
+            extra={
+                # 'log_type': LogType.TRANSITION_ERROR,
+                'log_data': state.get_log_data()
+            })
 
 
 class NextTransition(object):
