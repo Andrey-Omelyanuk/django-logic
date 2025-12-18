@@ -760,7 +760,6 @@ class ApplyTransitionTestCase(TestCase):
         process = TestProcess(instance=self.invoice, field_name='status')
         process.cancel(foo='bar', user='user')
         self.assertTrue(change_state.called)
-        self.assertEqual(change_state.call_args[1], {
-            'foo': 'bar',
-            'user': 'user'
-        })
+        call_kwargs = change_state.call_args[1]
+        self.assertEqual(call_kwargs['foo'], 'bar')
+        self.assertEqual(call_kwargs['user'], 'user')

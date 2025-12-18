@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.core.cache import cache
 from django_logic import Transition, Action
+from django_logic.logger import TransitionEventType
 from django_logic.state import State
 from django_logic.exceptions import TransitionNotAllowed
 from tests.models import Invoice
@@ -231,7 +232,7 @@ class TransitionLoggingTestCase(TestCase):
         self.assertGreater(len(all_logs), 0)
         
         # Check that Start activity log has expected fields
-        start_logs = [log for log in all_logs if log.get('activity') == 'Start']
+        start_logs = [log for log in all_logs if log.get('event_type') == TransitionEventType.START.value]
         self.assertGreater(len(start_logs), 0)
         start_log = start_logs[0]
         self.assertIn('field_name', start_log)

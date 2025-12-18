@@ -101,8 +101,10 @@ class Transition(BaseTransition):
         :param state: State object
         """
         extra = {
-            'event_type': TransitionEventType.START,
+            'event_type': TransitionEventType.START.value,
             'action_name': self.action_name,
+            'transition': self.action_name,
+            'instance_pk': state.instance.pk,
         }
         extra.update(state.get_log_data())
         extra.update(kwargs)
@@ -136,7 +138,7 @@ class Transition(BaseTransition):
                              log_type=LogType.TRANSITION_DEBUG,
                              log_data=log_data)
 
-            self._log_set_state(self.in_progress_state)
+            self._log_set_state(self.in_progress_state, kwargs)
 
         self._init_transition_context(kwargs)
         logger.info(f'Executing side_effects: {type(self.side_effects).__name__}, commands: {len(self.side_effects.commands) if hasattr(self.side_effects, "commands") else "N/A"}')
