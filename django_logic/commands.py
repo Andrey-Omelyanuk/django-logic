@@ -1,4 +1,5 @@
-from django_logic.logger import transition_logger as logger
+from django_logic.constants import LogType
+from django_logic.logger import get_logger, transition_logger as logger
 from django_logic.state import State
 
 
@@ -9,6 +10,8 @@ class BaseCommand(object):
     def __init__(self, commands=None, transition=None):
         self._commands = commands or []
         self._transition = transition
+        # DEPRECATED
+        self.logger = get_logger(module_name=__name__)
 
     @property
     def commands(self):
@@ -43,6 +46,10 @@ class Permissions(BaseCommand):
 class SideEffects(BaseCommand):
     def execute(self, state: State, **kwargs):
         """Side-effects execution"""
+        # DEPRECATED
+        self.logger.info(f"{state.instance_key} side effects of '{self._transition.action_name}' started",
+                         log_type=LogType.TRANSITION_DEBUG,
+                         log_data=state.get_log_data())
         try:
             for command in self._commands:
                 logger.info(

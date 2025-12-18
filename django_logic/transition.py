@@ -3,7 +3,7 @@ from abc import ABC
 
 from django_logic.commands import SideEffects, Callbacks, Permissions, Conditions, NextTransition
 from django_logic.exceptions import TransitionNotAllowed
-from django_logic.logger import transition_logger as logger
+from django_logic.logger import get_logger, transition_logger as logger
 from django_logic.state import State
 
 
@@ -71,8 +71,7 @@ class Transition(BaseTransition):
         self.permissions = self.permissions_class(kwargs.get('permissions', []), transition=self)
         self.conditions = self.conditions_class(kwargs.get('conditions', []), transition=self)
         self.next_transition = self.next_transition_class(kwargs.get('next_transition', None))
-        self.parent_id = kwargs.get('parent_id', None)   # always None, will be implemented later
-        self.tr_id = uuid.uuid4()
+        self.logger = get_logger(module_name=__name__)  # DEPRECATED
 
     def __str__(self):
         return f"Transition: {self.action_name} to {self.target}"
