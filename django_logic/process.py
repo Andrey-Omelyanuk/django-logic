@@ -1,3 +1,4 @@
+import uuid
 import warnings
 from functools import partial
 
@@ -68,6 +69,23 @@ class Process(object):
                              f"to {transition.target}",
                              log_type=LogType.TRANSITION_DEBUG,
                              log_data=self.state.get_log_data())
+
+            logger.info(f"{self.state.instance_key}, process {self.process_name} "
+                             f"executes '{action_name}' transition from {self.state.cached_state} "
+                             f"to {transition.target}",
+                            #  log_type=LogType.TRANSITION_DEBUG,
+                            extra={
+                                'log_data': self.state.get_log_data(),
+                            })
+
+            tr_id = uuid.uuid4()
+            kwargs['root_id'] = kwargs.get('root_id', tr_id)
+            kwargs['parent_id'] = kwargs.get('tr_id', tr_id)
+            kwargs['tr_id'] = tr_id
+            # Pass process class for cases where process is not bound to model
+            if 'process_class' not in kwargs:
+                process_class = f"{self.__class__.__module__}.{self.__class__.__name__}"
+                kwargs['process_class'] = process_class
             return transition.change_state(self.state, **kwargs)
 
         elif len(transitions) > 1:

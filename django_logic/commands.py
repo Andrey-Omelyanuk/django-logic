@@ -53,10 +53,9 @@ class SideEffects(BaseCommand):
         try:
             for command in self._commands:
                 logger.info(
-                    f'{self._transition.parent_id} {self._transition.tr_id} SideEffect {command.__name__}',
+                    f'{kwargs.get("tr_id")} SideEffect {command.__name__}',
                     extra={
-                        'parent_id': self._transition.parent_id, 
-                        'tr_id': self._transition.tr_id, 
+                        'tr_id': kwargs.get("tr_id"), 
                         'activity': 'SideEffect', 
                         'side_effect': command.__name__,
                     }
@@ -72,8 +71,7 @@ class SideEffects(BaseCommand):
 
             logger.error(error,
                 extra={
-                    'parent_id': self._transition.parent_id, 
-                    'tr_id': self._transition.tr_id, 
+                    'tr_id': kwargs.get("tr_id"), 
                 })
             self._transition.fail_transition(state, error, **kwargs)
         else:
@@ -108,9 +106,9 @@ class Callbacks(BaseCommand):
                     'log_data': state.get_log_data()
                 })
             logger.error(error,
-                extra={
-                    # 'log_type': LogType.TRANSITION_ERROR,
-                    'log_data': state.get_log_data()
+            extra={
+                # 'log_type': LogType.TRANSITION_ERROR,
+                'log_data': state.get_log_data()
             })
 
 
