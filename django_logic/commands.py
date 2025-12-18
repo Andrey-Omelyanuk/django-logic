@@ -63,6 +63,13 @@ class SideEffects(BaseCommand):
                 )
                 command(state.instance, **kwargs)
         except Exception as error:
+            # DEPRECATED
+            self.logger.info(f"{state.instance_key} side effects of '{self._transition.action_name}' failed "
+                             f"with {error}",
+                             log_type=LogType.TRANSITION_DEBUG,
+                             log_data=state.get_log_data())
+            self.logger.error(error, log_type=LogType.TRANSITION_ERROR, log_data=state.get_log_data())
+
             logger.error(error,
                 extra={
                     'parent_id': self._transition.parent_id, 
@@ -70,6 +77,10 @@ class SideEffects(BaseCommand):
                 })
             self._transition.fail_transition(state, error, **kwargs)
         else:
+            # DEPRECATED
+            self.logger.info(f"{state.instance_key} side-effects of '{self._transition.action_name}' succeeded",
+                             log_type=LogType.TRANSITION_DEBUG,
+                             log_data=state.get_log_data())
             self._transition.complete_transition(state, **kwargs)
 
 
@@ -85,15 +96,21 @@ class Callbacks(BaseCommand):
             for command in self.commands:
                 command(state.instance, **kwargs)
         except Exception as error:
+            # DEPRECATED
+            self.logger.info(f"{state.instance_key} callbacks of '{self._transition.action_name}` failed with {error}",
+                             log_type=LogType.TRANSITION_DEBUG,
+                             log_data=state.get_log_data())
+            self.logger.error(error, log_type=LogType.TRANSITION_ERROR, log_data=state.get_log_data())
+
             logger.info(f"{state.instance_key} callbacks of '{self._transition.action_name}` failed with {error}",
                 extra={
                     # 'log_type': LogType.TRANSITION_DEBUG,
                     'log_data': state.get_log_data()
                 })
             logger.error(error,
-            extra={
-                # 'log_type': LogType.TRANSITION_ERROR,
-                'log_data': state.get_log_data()
+                extra={
+                    # 'log_type': LogType.TRANSITION_ERROR,
+                    'log_data': state.get_log_data()
             })
 
 
