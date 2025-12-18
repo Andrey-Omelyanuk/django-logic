@@ -82,7 +82,7 @@ class Transition(BaseTransition):
 
     def is_valid(self, state: State, user=None) -> bool:
         """
-        It validates this process to meet conditions and pass permissions
+        It validates that this process meets conditions and passes permissions
         :param state: State object
         :param user: any object used to pass permissions
         :return: True or False
@@ -93,7 +93,7 @@ class Transition(BaseTransition):
 
     def change_state(self, state: State, **kwargs):
         """
-        This method changes a state by the following algorithm:
+        This method changes the state by the following algorithm:
         - Lock state
         - Change state to `in progress` if such exists
         - Run side effects which should run `complete_transition` in case of success
@@ -115,7 +115,7 @@ class Transition(BaseTransition):
         try:
             if state.is_locked() or not state.lock():
                 raise TransitionNotAllowed("State is locked")
-            # DEPRICATED
+            # DEPRECATED
             self.logger.info(f'{state.instance_key} is locked',
                              log_type=LogType.TRANSITION_DEBUG,
                              log_data=state.get_log_data())
@@ -125,14 +125,14 @@ class Transition(BaseTransition):
         else:
             self._log_lock(kwargs)
 
-        # DEPRICATED
+        # DEPRECATED
         self.logger.info(f'{state.instance_key} has been locked',
                          log_type=LogType.TRANSITION_DEBUG,
                          log_data=state.get_log_data())
 
         if self.in_progress_state:
             state.set_state(self.in_progress_state)
-            # DEPRICATED
+            # DEPRECATED
             log_data = state.get_log_data().update({'user': kwargs.get('user', None)})
             self.logger.info(f'{state.instance_key} state changed to {self.in_progress_state}',
                              log_type=LogType.TRANSITION_DEBUG,
@@ -146,22 +146,22 @@ class Transition(BaseTransition):
 
     def complete_transition(self, state: State, **kwargs):
         """
-        It completes the transition process for provided state and runs callbacks.
+        It completes the transition process for the provided state and runs callbacks.
         The instance will be unlocked and callbacks executed
         :param state: State object
         """
         state.set_state(self.target)
-        # DEPRICATED
+        # DEPRECATED
         log_data = state.get_log_data()
         log_data.update({'user': kwargs.get('user', None)})
         self.logger.info(f'{state.instance_key} state changed to {self.target}',
                          log_type=LogType.TRANSITION_COMPLETED,
                          log_data=log_data)
-        # TODO: I beliave, logs should be triggered into state methods instead of transition methods
+        # TODO: I believe logs should be triggered into state methods instead of transition methods
         self._log_set_state(self.target, kwargs)
 
         state.unlock()
-        # DEPRICATED
+        # DEPRECATED
         self.logger.info(f'{state.instance_key} has been unlocked',
                          log_type=LogType.TRANSITION_DEBUG,
                          log_data=state.get_log_data())
@@ -169,18 +169,18 @@ class Transition(BaseTransition):
         self._log_unlock(kwargs)
 
         self.callbacks.execute(state, **kwargs)
-        # TODO: can we use callback to execute next transition instead
+        # TODO: Can we use a callback to execute the next transition instead?
         self.next_transition.execute(state, **kwargs)
 
     def fail_transition(self, state: State, exception: Exception, **kwargs):
         """
-        It triggers fail transition in case of any failure during the side effects execution.
+        It triggers a failed transition in case of any failure during the side effects execution.
         :param state: State object
         :param exception: Exception that caused transition failure
         """
         if self.failed_state:
             state.set_state(self.failed_state)
-            # DEPRICATED
+            # DEPRECATED
             log_data = state.get_log_data()
             log_data.update({'user': kwargs.get('user', None)})
             self.logger.info(f'{state.instance_key} state changed to {self.failed_state}',
@@ -190,7 +190,7 @@ class Transition(BaseTransition):
             self._log_set_state(self.failed_state, kwargs)
 
         state.unlock()
-        # DEPRICATED
+        # DEPRECATED
         self.logger.info(f'{state.instance_key} has been unlocked',
                          log_type=LogType.TRANSITION_DEBUG,
                          log_data=state.get_log_data())

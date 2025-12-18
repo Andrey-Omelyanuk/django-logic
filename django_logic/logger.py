@@ -29,7 +29,7 @@ class AbstractLogger(ABC):
 
 # DEPRECATED
 class DefaultLogger(AbstractLogger):
-    """ Logger that uses root logging settings """
+    """A logger that uses root logging settings."""
     logger = None
 
     def __init__(self, **kwargs):
@@ -46,7 +46,7 @@ class DefaultLogger(AbstractLogger):
 
 # DEPRECATED
 class NullLogger(AbstractLogger):
-    """ Logger that doesn't write messages """
+    """A logger that doesn't write messages."""
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -73,9 +73,9 @@ def get_logger(**kwargs) -> AbstractLogger:
     return DefaultLogger(**kwargs)
 
 
-# Lib logger for logging all activity of django-logic.
+# The main logger for logging all activity of django-logic.
 logger: logging.Logger = logging.getLogger('django-logic')
-# Special logger for logging only activity of transitions.
+# A special logger for logging only activity of transitions.
 transition_logger: logging.Logger = logging.getLogger('django-logic.transition')
 
 class TransitionEventType(Enum):

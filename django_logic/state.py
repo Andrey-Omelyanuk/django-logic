@@ -59,7 +59,7 @@ class State(object):
 
     def unlock(self):
         """
-        It unclocks the current state
+        It unlocks the current state
         """
         cache.delete(self._get_hash())
 
