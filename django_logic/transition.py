@@ -118,6 +118,10 @@ class Transition(BaseTransition):
         try:
             if state.is_locked() or not state.lock():
                 raise TransitionNotAllowed("State is locked")
+            # DEPRICATED
+            self.logger.info(f'{state.instance_key} is locked',
+                             log_type=LogType.TRANSITION_DEBUG,
+                             log_data=state.get_log_data())
         except TransitionNotAllowed as e:
             logger.error(e, extra={'parent_id': self.parent_id, 'tr_id': self.tr_id})
             raise e
