@@ -17,7 +17,7 @@ class Process(object):
     - contains either transitions and processes
     - transitions defined as parameters of the class
     - processes should be defined in the list
-    - validate - conditions and permissions of the process affects all transitions/processes inside
+    - validate - conditions and permissions of the process affect all transitions/processes inside
     - has methods like get_all_available_transitions, etc
     """
     nested_processes = []
@@ -56,7 +56,7 @@ class Process(object):
 
     def _get_transition_method(self, action_name: str, **kwargs):
         """
-        It returns a callable transition method by provided action name.
+        It returns a callable transition method for the provided action name.
         """
         user = kwargs['user'] if 'user' in kwargs else None
         transitions = list(self.get_available_transitions(action_name=action_name, user=user))
@@ -146,7 +146,7 @@ class Process(object):
         """
         It returns all available transition which meet conditions and pass permissions.
         Including nested processes.
-        :param user: any object which used to validate permissions
+        :param user: any object which is used to validate permissions
         :param action_name: str
         :return: yield `django_logic.Transition`
         """
@@ -195,7 +195,7 @@ class ProcessManager:
     @property
     def non_state_fields(self):
         """
-        Returns list of object's non-state fields.
+        Returns a list of the object's non-state fields.
         """
         field_names = set()
         for field in self._meta.fields:
@@ -209,7 +209,7 @@ class ProcessManager:
     def save(self, *args, **kwargs):
         """
         It saves all non-state fields by default.
-        State fields can be saved if explicitly passed in 'update_fields' kwarg.
+        State fields can be saved if explicitly passed in the 'update_fields' kwarg.
         """
         if self.id is not None and 'update_fields' not in kwargs:
             kwargs['update_fields'] = self.non_state_fields

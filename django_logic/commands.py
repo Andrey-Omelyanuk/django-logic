@@ -87,7 +87,7 @@ class Callbacks(BaseCommand):
         """
         Callback execution method.
         It runs commands one by one, if any of them raises an exception
-        it will stop execution and send a message to logger.
+        it will stop execution and send a message to the logger.
         Please note, it doesn't run failure callbacks in case of exception.
         """
         try:
