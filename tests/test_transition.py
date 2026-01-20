@@ -64,7 +64,8 @@ class TransitionSideEffectsTestCase(TestCase):
                                 side_effects=[disable_invoice, fail_invoice, enable_invoice])
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        transition.change_state(state)
+        with self.assertRaises(Exception):
+            transition.change_state(state)
         self.assertEqual(self.invoice.status, 'draft')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -74,7 +75,8 @@ class TransitionSideEffectsTestCase(TestCase):
                                 side_effects=[disable_invoice, fail_invoice, enable_invoice])
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        transition.change_state(state)
+        with self.assertRaises(Exception):
+            transition.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -132,7 +134,8 @@ class TransitionCallbacksTestCase(TestCase):
                                 side_effects=[disable_invoice, fail_invoice, enable_invoice])
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        transition.change_state(state)
+        with self.assertRaises(Exception):
+            transition.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -161,7 +164,8 @@ class TransitionFailureCallbacksTestCase(TestCase):
                                 failure_callbacks=[disable_invoice], failed_state='failed')
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        transition.change_state(state)
+        with self.assertRaises(Exception):
+            transition.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -172,7 +176,8 @@ class TransitionFailureCallbacksTestCase(TestCase):
         self.assertTrue(self.invoice.is_available)
         self.assertFalse(self.invoice.customer_received)
         state = State(self.invoice, 'status')
-        transition.change_state(state)
+        with self.assertRaises(Exception):
+            transition.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertTrue(self.invoice.customer_received)
@@ -186,7 +191,8 @@ class TransitionFailureCallbacksTestCase(TestCase):
         self.assertTrue(self.invoice.is_available)
         self.assertTrue(self.invoice.customer_received)
         state = State(self.invoice, 'status')
-        transition.change_state(state, is_available=False, customer_received=False)
+        with self.assertRaises(Exception):
+            transition.change_state(state, is_available=False, customer_received=False)
         self.invoice.refresh_from_db()
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
@@ -200,7 +206,8 @@ class TransitionFailureCallbacksTestCase(TestCase):
                                 side_effects=[fail_invoice], failure_callbacks=[debug_action])
         self.invoice.refresh_from_db()
         state = State(self.invoice, 'status')
-        transition.change_state(state, foo="bar")
+        with self.assertRaises(Exception):
+            transition.change_state(state, foo="bar")
         self.assertTrue(debug_mock.called)
         self.assertEqual(debug_mock.call_count, 1)
         call_args = debug_mock.call_args[0]
@@ -237,7 +244,8 @@ class ActionSideEffectsTestCase(TestCase):
         action = Action('test', sources=['draft'], side_effects=[disable_invoice, fail_invoice, enable_invoice])
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        action.change_state(state)
+        with self.assertRaises(Exception):
+            action.change_state(state)
         self.assertEqual(self.invoice.status, 'draft')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -246,7 +254,8 @@ class ActionSideEffectsTestCase(TestCase):
         action = Action('test', sources=['draft'], failed_state='failed', side_effects=[disable_invoice, fail_invoice, enable_invoice])
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        action.change_state(state)
+        with self.assertRaises(Exception):
+            action.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -300,7 +309,8 @@ class ActionCallbacksTestCase(TestCase):
         action = Action('test', failed_state='failed', sources=['draft'], side_effects=[disable_invoice, fail_invoice, enable_invoice])
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        action.change_state(state)
+        with self.assertRaises(Exception):
+            action.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -328,7 +338,8 @@ class ActionFailureCallbacksTestCase(TestCase):
                         failure_callbacks=[disable_invoice], failed_state='failed')
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        action.change_state(state)
+        with self.assertRaises(Exception):
+            action.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -339,7 +350,8 @@ class ActionFailureCallbacksTestCase(TestCase):
         self.assertTrue(self.invoice.is_available)
         self.assertFalse(self.invoice.customer_received)
         state = State(self.invoice, 'status')
-        action.change_state(state)
+        with self.assertRaises(Exception):
+            action.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertTrue(self.invoice.customer_received)
@@ -353,7 +365,8 @@ class ActionFailureCallbacksTestCase(TestCase):
         self.assertTrue(self.invoice.is_available)
         self.assertTrue(self.invoice.customer_received)
         state = State(self.invoice, 'status')
-        action.change_state(state, is_available=False, customer_received=False)
+        with self.assertRaises(Exception):
+            action.change_state(state, is_available=False, customer_received=False)
         self.invoice.refresh_from_db()
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
@@ -367,7 +380,8 @@ class ActionFailureCallbacksTestCase(TestCase):
                         side_effects=[fail_invoice], sources=['draft'], failure_callbacks=[debug_action])
         self.invoice.refresh_from_db()
         state = State(self.invoice, 'status')
-        action.change_state(state, foo="bar")
+        with self.assertRaises(Exception):
+            action.change_state(state, foo="bar")
         self.assertTrue(debug_mock.called)
         self.assertEqual(debug_mock.call_count, 1)
         call_args = debug_mock.call_args[0]
@@ -421,7 +435,8 @@ class TransitionNextTransitionTestCase(TestCase):
         self.process.transitions.append(transition1)
 
         with patch.object(self.next_transition, 'change_state') as next_transition_mock:
-            transition1.change_state(self.state)
+            with self.assertRaises(Exception):
+                transition1.change_state(self.state)
 
         next_transition_mock.assert_not_called()
 
