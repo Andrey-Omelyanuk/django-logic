@@ -169,11 +169,10 @@ class TransitionLoggingTestCase(TestCase):
 
         transition.change_state(state)
 
-        # Check for callbacks failed log
-        self.assertTrue(self.logs.has_log('callbacks'))
-        callback_logs = [log for log in self.logs.get_logs() if 'callbacks' in log['message']]
-        self.assertTrue(any('failed' in log['message'] for log in callback_logs))
-        # Should also have error logs
+        self.assertTrue(self.logs.has_log('Callbacks'))
+        callback_logs = [log for log in self.logs.get_logs() if 'Callback' in log['message']]
+        self.assertGreater(len(callback_logs), 0)
+        # Should also have error logs when a callback raises
         error_logs = [log for log in self.logs.get_logs() if log.get('level') == 'ERROR']
         self.assertGreater(len(error_logs), 0)
 

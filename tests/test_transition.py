@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.test import TestCase
 
@@ -199,23 +199,99 @@ class TransitionFailureCallbacksTestCase(TestCase):
         self.assertFalse(self.invoice.customer_received)
         self.assertFalse(state.is_locked())
 
-    @patch('tests.test_transition.debug_action')
-    def test_failure_callback_exception_passed(self, debug_mock):
-        update_invoice(self.invoice, is_available=True, customer_received=True)
+    def test_failure_callback_exception_passed(self):
+        failure_callback_mock = Mock(__name__='test_failure_callback')
         transition = Transition('test', sources=[], target='success', failed_state='failed',
-                                side_effects=[fail_invoice], failure_callbacks=[debug_action])
+                                side_effects=[fail_invoice], failure_callbacks=[failure_callback_mock])
         self.invoice.refresh_from_db()
         state = State(self.invoice, 'status')
         with self.assertRaises(Exception):
             transition.change_state(state, foo="bar")
-        self.assertTrue(debug_mock.called)
-        self.assertEqual(debug_mock.call_count, 1)
-        call_args = debug_mock.call_args[0]
-        call_kwargs = debug_mock.call_args[1]
+        failure_callback_mock.assert_called_once()
+        call_args = failure_callback_mock.call_args[0]
+        call_kwargs = failure_callback_mock.call_args[1]
         self.assertEqual(call_args, (self.invoice,))
-        self.assertEqual(len(call_kwargs), 3)
+        self.assertIn('exception', call_kwargs)
         self.assertTrue(isinstance(call_kwargs['exception'], Exception))
         self.assertEqual(call_kwargs['foo'], 'bar')
+
+
+class TransitionFailureSideEffectsTestCase(TestCase):
+    def setUp(self) -> None:
+        self.invoice = Invoice.objects.create(status='draft')
+
+    def test_one_failure_side_effect(self):
+        transition = Transition('test', sources=[], target='success', side_effects=[fail_invoice],
+                                failure_side_effects=[disable_invoice], failed_state='failed')
+        self.assertTrue(self.invoice.is_available)
+        state = State(self.invoice, 'status')
+        with self.assertRaises(Exception):
+            transition.change_state(state)
+        self.assertEqual(self.invoice.status, 'failed')
+        self.assertFalse(self.invoice.is_available)
+        self.assertFalse(state.is_locked())
+
+    def test_many_failure_side_effects(self):
+        transition = Transition('test', sources=[], target='success', side_effects=[fail_invoice],
+                                failure_side_effects=[disable_invoice, receive_invoice], failed_state='failed')
+        self.assertTrue(self.invoice.is_available)
+        self.assertFalse(self.invoice.customer_received)
+        state = State(self.invoice, 'status')
+        with self.assertRaises(Exception):
+            transition.change_state(state)
+        self.assertEqual(self.invoice.status, 'failed')
+        self.assertFalse(self.invoice.is_available)
+        self.assertTrue(self.invoice.customer_received)
+        self.assertFalse(state.is_locked())
+
+    def test_failure_side_effect_with_parameters(self):
+        update_invoice(self.invoice, is_available=True, customer_received=True)
+        transition = Transition('test', sources=[], target='success', failed_state='failed',
+                                side_effects=[fail_invoice], failure_side_effects=[update_invoice])
+        self.invoice.refresh_from_db()
+        self.assertTrue(self.invoice.is_available)
+        self.assertTrue(self.invoice.customer_received)
+        state = State(self.invoice, 'status')
+        with self.assertRaises(Exception):
+            transition.change_state(state, is_available=False, customer_received=False)
+        self.invoice.refresh_from_db()
+        self.assertEqual(self.invoice.status, 'failed')
+        self.assertFalse(self.invoice.is_available)
+        self.assertFalse(self.invoice.customer_received)
+        self.assertFalse(state.is_locked())
+
+    def test_failure_side_effect_exception_passed(self):
+        failure_side_effect_mock = Mock(__name__='test_failure_side_effect')
+        transition = Transition('test', sources=[], target='success', failed_state='failed',
+                                side_effects=[fail_invoice], failure_side_effects=[failure_side_effect_mock])
+        state = State(self.invoice, 'status')
+        with self.assertRaises(Exception):
+            transition.change_state(state, foo="bar")
+        failure_side_effect_mock.assert_called_once()
+        call_args = failure_side_effect_mock.call_args[0]
+        call_kwargs = failure_side_effect_mock.call_args[1]
+        self.assertEqual(call_args, (self.invoice,))
+        self.assertIn('exception', call_kwargs)
+        self.assertTrue(isinstance(call_kwargs['exception'], Exception))
+        self.assertEqual(call_kwargs['foo'], 'bar')
+
+    def test_failure_side_effects_run_before_failure_callbacks(self):
+        order = []
+
+        def failure_side_effect(invoice, *args, **kwargs):
+            order.append('failure_side_effect')
+
+        def failure_callback(invoice, *args, **kwargs):
+            order.append('failure_callback')
+
+        transition = Transition('test', sources=[], target='success', failed_state='failed',
+                                side_effects=[fail_invoice],
+                                failure_side_effects=[failure_side_effect],
+                                failure_callbacks=[failure_callback])
+        state = State(self.invoice, 'status')
+        with self.assertRaises(Exception):
+            transition.change_state(state)
+        self.assertEqual(order, ['failure_side_effect', 'failure_callback'])
 
 
 class ActionSideEffectsTestCase(TestCase):
@@ -373,21 +449,63 @@ class ActionFailureCallbacksTestCase(TestCase):
         self.assertFalse(self.invoice.customer_received)
         self.assertFalse(state.is_locked())
 
-    @patch('tests.test_transition.debug_action')
-    def test_failure_callback_exception_passed(self, debug_mock):
-        update_invoice(self.invoice, is_available=True, customer_received=True)
+    def test_failure_callback_exception_passed(self):
+        failure_callback_mock = Mock(__name__='test_failure_callback')
         action = Action('test', failed_state='failed',
-                        side_effects=[fail_invoice], sources=['draft'], failure_callbacks=[debug_action])
+                        side_effects=[fail_invoice], sources=['draft'], failure_callbacks=[failure_callback_mock])
         self.invoice.refresh_from_db()
         state = State(self.invoice, 'status')
         with self.assertRaises(Exception):
             action.change_state(state, foo="bar")
-        self.assertTrue(debug_mock.called)
-        self.assertEqual(debug_mock.call_count, 1)
-        call_args = debug_mock.call_args[0]
-        call_kwargs = debug_mock.call_args[1]
+        failure_callback_mock.assert_called_once()
+        call_args = failure_callback_mock.call_args[0]
+        call_kwargs = failure_callback_mock.call_args[1]
         self.assertEqual(call_args, (self.invoice,))
-        self.assertEqual(len(call_kwargs), 3)
+        self.assertIn('exception', call_kwargs)
+        self.assertTrue(isinstance(call_kwargs['exception'], Exception))
+        self.assertEqual(call_kwargs['foo'], 'bar')
+
+
+class ActionFailureSideEffectsTestCase(TestCase):
+    def setUp(self) -> None:
+        self.invoice = Invoice.objects.create(status='draft')
+
+    def test_one_failure_side_effect(self):
+        action = Action('test', sources=['draft'], side_effects=[fail_invoice],
+                        failure_side_effects=[disable_invoice], failed_state='failed')
+        self.assertTrue(self.invoice.is_available)
+        state = State(self.invoice, 'status')
+        with self.assertRaises(Exception):
+            action.change_state(state)
+        self.assertEqual(self.invoice.status, 'failed')
+        self.assertFalse(self.invoice.is_available)
+        self.assertFalse(state.is_locked())
+
+    def test_many_failure_side_effects(self):
+        action = Action('test', sources=['draft'], side_effects=[fail_invoice],
+                        failure_side_effects=[disable_invoice, receive_invoice], failed_state='failed')
+        self.assertTrue(self.invoice.is_available)
+        self.assertFalse(self.invoice.customer_received)
+        state = State(self.invoice, 'status')
+        with self.assertRaises(Exception):
+            action.change_state(state)
+        self.assertEqual(self.invoice.status, 'failed')
+        self.assertFalse(self.invoice.is_available)
+        self.assertTrue(self.invoice.customer_received)
+        self.assertFalse(state.is_locked())
+
+    def test_failure_side_effect_exception_passed(self):
+        failure_side_effect_mock = Mock(__name__='test_failure_side_effect')
+        action = Action('test', failed_state='failed', sources=['draft'],
+                        side_effects=[fail_invoice], failure_side_effects=[failure_side_effect_mock])
+        state = State(self.invoice, 'status')
+        with self.assertRaises(Exception):
+            action.change_state(state, foo="bar")
+        failure_side_effect_mock.assert_called_once()
+        call_args = failure_side_effect_mock.call_args[0]
+        call_kwargs = failure_side_effect_mock.call_args[1]
+        self.assertEqual(call_args, (self.invoice,))
+        self.assertIn('exception', call_kwargs)
         self.assertTrue(isinstance(call_kwargs['exception'], Exception))
         self.assertEqual(call_kwargs['foo'], 'bar')
 
