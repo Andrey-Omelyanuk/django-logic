@@ -95,11 +95,12 @@ order.process.pay()  # Changes status from 'pending' to 'paid'
 ## Core Concepts
 
 ### Definitions 
-- **Transition** - Changes the state of an object from one to another. Contains conditions, permissions, side-effects, callbacks, and failure callbacks.
+- **Transition** - Changes the state of an object from one to another. Contains conditions, permissions, side-effects, callbacks, failure side-effects, and failure callbacks.
 - **Action** - Similar to transition but doesn't change the state. Useful for operations that need permissions and side effects without state change.
 - **Side-effects** - Functions executed during a transition before reaching the target state. If any fail, the transition is rolled back.
 - **Callbacks** - Functions executed after successfully reaching the target state.
-- **Failure callbacks** - Functions executed if side-effects fail.
+- **Failure side-effects** - Functions executed when side-effects fail, before the state is unlocked. Useful for cleanup or compensation that must run while the instance is still locked.
+- **Failure callbacks** - Functions executed after side-effects fail, after the state is unlocked.
 - **Conditions** - Functions that must return True for a transition to be allowed.
 - **Permissions** - Functions that check if a user can perform a transition.
 - **Process** - Groups related transitions with common conditions and permissions.
@@ -492,7 +493,7 @@ class MyProcess(Process):
 #### 4. Side Effects Not Rolling Back
 Side effects that modify external systems may not roll back automatically.
 
-**Solution**: Implement compensating transactions in failure callbacks:
+**Solution**: Implement compensating transactions using failure side-effects (run while locked) or failure callbacks (run after unlock):
 
 ```python
 def compensate_payment(instance, exception, **kwargs):
@@ -504,9 +505,12 @@ Transition(
     sources=['pending'],
     target='paid',
     side_effects=[process_payment, another_side_effect],
-    failure_callbacks=[compensate_payment],
+    failure_side_effects=[compensate_payment],  # runs before unlock (while instance is locked)
+    failure_callbacks=[notify_admin],            # runs after unlock
 )
 ```
+
+When a side-effect fails, execution order is: set `failed_state` (if configured) → **failure_side_effects** → unlock → **failure_callbacks**. Use failure_side_effects for cleanup that must run before other processes can access the instance.
 
 ## Django-Logic vs Django FSM 
 [Django FSM](https://github.com/viewflow/django-fsm) is a predecessor of Django-Logic. 
@@ -516,7 +520,7 @@ Django-Logic was created to address limitations and add new features:
 - **Processes**: Django-Logic supports grouping transitions into processes
 - **Nested Processes**: Build hierarchical workflows  
 - **Built-in Locking**: Prevents race conditions out of the box
-- **Failure Handling**: Dedicated failure callbacks and states
+- **Failure Handling**: Dedicated failure side-effects, failure callbacks, and failed states
 - **Better Separation**: Clear separation between business logic and implementation
 - **Background Tasks**: Celery integration via [Django-Logic-Celery](https://github.com/Borderless360/django-logic-celery)
 
