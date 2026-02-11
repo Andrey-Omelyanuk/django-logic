@@ -82,9 +82,10 @@ class Process(object):
             if is_root:
                 try:
                     return transition.change_state(self.state, **kwargs)
-                except Exception:
-                    # Exception already handled by fail_transition, just swallow it at the top level
-                    return tr_id
+                except Exception as e:
+                    # re-raise with tr_id attached to the exception
+                    e.tr_id = tr_id
+                    raise
             else:
                 return transition.change_state(self.state, **kwargs)
 
