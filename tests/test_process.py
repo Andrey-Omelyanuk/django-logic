@@ -696,8 +696,7 @@ class ApplyTransitionTestCase(TestCase):
         self.assertFalse(self.invoice.customer_received)
         self.assertEqual(self.invoice.status, 'draft')
         process = TestProcess(instance=self.invoice, field_name='status')
-        with self.assertRaises(Exception):
-            process.undo(is_available=True, customer_received=True)
+        process.undo(is_available=True, customer_received=True)
         self.invoice.refresh_from_db()
         self.assertEqual(self.invoice.status, 'failed')
         self.assertTrue(self.invoice.is_available)
