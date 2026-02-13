@@ -242,3 +242,4 @@ dmypy.json
 Dockerfile
 makefile
 /logs/
+.cursor/
