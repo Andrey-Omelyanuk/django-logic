@@ -145,4 +145,9 @@ class NextTransition(object):
             return None
 
         transition = transitions[0]
-        transition.change_state(state, **kwargs)
+        try:
+            return transition.change_state(state, **kwargs)
+        except Exception as error:
+            # Ignore any errors in the next transition, 
+            # it should not impact the main transition execution
+            logger.error(error)
