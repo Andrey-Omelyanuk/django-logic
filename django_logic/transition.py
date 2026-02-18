@@ -247,6 +247,29 @@ class Transition(BaseTransition):
         if 'context' not in kwargs:
             kwargs['context'] = {}
 
+    def get_task_kwargs(self, state: State, **kwargs):
+        task_kwargs = {
+            'app_label': state.instance._meta.app_label,
+            'model_name': state.instance._meta.model_name,
+            'instance_id': state.instance.pk,
+            'action_name': self.action_name,
+            'target': self.target,
+            'process_name': state.process_name,
+            'field_name': state.field_name,
+            'process_class': kwargs.get('process_class'),
+        }
+        # Add user_id to task_kwargs
+        if 'user_id' in kwargs:
+            task_kwargs['user_id'] = kwargs['user_id']
+        elif (user := kwargs.get('user')) is not None:
+            task_kwargs['user_id'] = user.id
+
+        for key in ('tr_id', 'root_id', 'parent_id'):
+            if key in kwargs:
+                task_kwargs[key] = str(kwargs[key]) if kwargs[key] else None
+
+        return task_kwargs
+
 
 class Action(Transition):
     """
