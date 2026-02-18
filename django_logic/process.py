@@ -38,11 +38,7 @@ class Process(object):
         self.field_name = field_name
         self.instance = instance
         if field_name == '' or instance is None:
-            if state is None:
-                raise ValueError(
-                    "Process requires state when field_name is empty or instance is None. "
-                    "Pass state= or use field_name and instance to build state."
-                )
+            assert state is not None
             self.state = state
         elif state is None:
             assert field_name and instance is not None
