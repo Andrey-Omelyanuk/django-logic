@@ -7,6 +7,7 @@ from django_logic.exceptions import TransitionNotAllowed
 from django_logic.logger import get_logger
 from django_logic.logger import transition_logger, TransitionEventType
 from django_logic.state import State
+from django_logic.tasks import run_transition_in_background
 
 
 class BaseTransition(ABC):
@@ -21,7 +22,7 @@ class BaseTransition(ABC):
     conditions_class = Conditions
     next_transition_class = NextTransition
 
-    def is_valid(self, state: State, user=None) -> bool:
+    def is_valid(self, instance: object, user=None) -> bool:
         raise NotImplementedError
 
     def change_state(self, state: State, **kwargs):
@@ -85,16 +86,15 @@ class Transition(BaseTransition):
     def __repr__(self):
         return self.__str__()
 
-    def is_valid(self, state: State, user=None) -> bool:
+    def is_valid(self, instance: object, user=None) -> bool:
         """
         It validates that this process meets conditions and passes permissions
-        :param state: State object
+        :param instance: object instance
         :param user: any object used to pass permissions
         :return: True or False
         """
-        return (not state.is_locked() and
-                self.permissions.execute(state, user) and
-                self.conditions.execute(state))
+        return (self.permissions.execute(instance, user) and
+                self.conditions.execute(instance))
 
     def change_state(self, state: State, **kwargs) -> UUID | None:
         """
@@ -113,33 +113,52 @@ class Transition(BaseTransition):
             f'{self.action_name} {state.instance_key} {kwargs.get("root_id")} {kwargs.get("parent_id")}'
         )
 
-        if state.is_locked() or not state.lock():
+        # Background Mode has two phases:
+        # Phase 1: Lock state and push transition to message broker
+        # Phase 2: Run transition inline in worker with skipping lock state
+        # Only the root transition in phase 2 skips lock; nested transitions must lock and log.
+        skip_lock = (
+            kwargs.get('background_mode_phase_2', False)
+            and kwargs.get('root_id') == kwargs.get('tr_id')
+        )
+        if not skip_lock:
+            if state.is_locked() or not state.lock():
+                # DEPRECATED
+                self.logger.info(f'{state.instance_key} is locked',
+                                log_type=LogType.TRANSITION_DEBUG,
+                                log_data=state.get_log_data())
+
+                raise TransitionNotAllowed("State is locked")
+
+            self._log_lock(kwargs)
             # DEPRECATED
-            self.logger.info(f'{state.instance_key} is locked',
-                             log_type=LogType.TRANSITION_DEBUG,
-                             log_data=state.get_log_data())
+            self.logger.info(f'{state.instance_key} has been locked',
+                            log_type=LogType.TRANSITION_DEBUG,
+                            log_data=state.get_log_data())
 
-            raise TransitionNotAllowed("State is locked")
+            if self.in_progress_state:
+                state.set_state(self.in_progress_state)
+                # DEPRECATED
+                log_data = state.get_log_data().update({'user': kwargs.get('user', None)})
+                self.logger.info(f'{state.instance_key} state changed to {self.in_progress_state}',
+                                log_type=LogType.TRANSITION_DEBUG,
+                                log_data=log_data)
 
-        self._log_lock(kwargs)
+                self._log_set_state(self.in_progress_state, kwargs)
 
-        # DEPRECATED
-        self.logger.info(f'{state.instance_key} has been locked',
-                         log_type=LogType.TRANSITION_DEBUG,
-                         log_data=state.get_log_data())
-
-        if self.in_progress_state:
-            state.set_state(self.in_progress_state)
-            # DEPRECATED
-            log_data = state.get_log_data().update({'user': kwargs.get('user', None)})
-            self.logger.info(f'{state.instance_key} state changed to {self.in_progress_state}',
-                             log_type=LogType.TRANSITION_DEBUG,
-                             log_data=log_data)
-
-            self._log_set_state(self.in_progress_state, kwargs)
-
-        self._init_transition_context(kwargs)
-        self.side_effects.execute(state, **kwargs)
+        # Note: Only root transition can be run in background
+        if kwargs.get('background_mode', False) \
+        and not kwargs.get('background_mode_phase_2', False) \
+        and kwargs.get('root_id') == kwargs.get('tr_id'): 
+            self._log_background_mode(kwargs)
+            self.run_in_background(state, **kwargs)
+        else:
+            self._init_transition_context(kwargs)
+            try:
+                self.side_effects.execute(state, **kwargs)
+            except Exception as e:
+                self._log_fail(kwargs, e)
+                raise e
 
         return kwargs.get('tr_id', None)
 
@@ -171,6 +190,12 @@ class Transition(BaseTransition):
         self.callbacks.execute(state, **kwargs)
         # TODO: Can we use a callback to execute the next transition instead?
         self.next_transition.execute(state, **kwargs)
+
+    def run_in_background(self, state: State, **kwargs):
+        """
+        Run the transition in background. 
+        """
+        raise NotImplementedError
 
     def fail_transition(self, state: State, exception: Exception, **kwargs):
         """
@@ -208,6 +233,15 @@ class Transition(BaseTransition):
 
     def _log_unlock(self, kwargs: dict):
         transition_logger.info(f'{kwargs.get("tr_id")} {TransitionEventType.UNLOCK.value}')
+
+    def _log_background_mode(self, kwargs: dict):
+        transition_logger.info(f'{kwargs.get("tr_id")} {TransitionEventType.BACKGROUND_MODE.value}')
+    
+    def _log_fail(self, kwargs: dict, exception: Exception):
+        transition_logger.error(
+            f"{kwargs.get('tr_id')} {TransitionEventType.FAIL.value}: {type(exception).__name__}: {exception}",
+            exc_info=True,
+        )
 
     @staticmethod
     def _init_transition_context(kwargs: dict) -> None:
@@ -249,3 +283,51 @@ class Action(Transition):
         :param state: State object
         """
         self.callbacks.execute(state, **kwargs)
+
+
+# class BackgroundTransition(Transition):
+#     """
+#     Transition that should be run in background if not yet in background.
+#     Default implementation is to use Celery task.
+#     """
+#     def __init__(self, action_name: str, sources: list, target: str, queue_name: str = 'celery', **kwargs):
+#         self.queue_name = queue_name
+#         super().__init__(action_name=action_name, sources=sources, target=target, **kwargs)
+
+#     def change_state(self, state: State, **kwargs):
+#         """
+#         Change the state to the in-progress state.
+#         """
+#         kwargs.pop('background_mode', None)  # avoid duplicate kwarg when caller passes it
+#         return super().change_state(state, background_mode=True, **kwargs)
+
+#     def get_task_kwargs(self, state: State, **kwargs):
+#         task_kwargs = {
+#             'app_label': state.instance._meta.app_label,
+#             'model_name': state.instance._meta.model_name,
+#             'instance_id': state.instance.pk,
+#             'action_name': self.action_name,
+#             'target': self.target,
+#             'process_name': state.process_name,
+#             'field_name': state.field_name,
+#             'process_class': kwargs.get('process_class'),
+#         }
+#         # Add user_id to task_kwargs
+#         if 'user_id' in kwargs:
+#             task_kwargs['user_id'] = kwargs['user_id']
+#         elif (user := kwargs.get('user')) is not None:
+#             task_kwargs['user_id'] = user.id
+
+#         for key in ('tr_id', 'root_id', 'parent_id'):
+#             if key in kwargs:
+#                 task_kwargs[key] = str(kwargs[key]) if kwargs[key] else None
+
+#         return task_kwargs
+
+#     def run_in_background(self, state: State, **kwargs):
+#         """
+#         Run the transition in background.
+#         """
+#         task_kwargs = self.get_task_kwargs(state, **kwargs)
+#         run_transition_in_background.apply_async(kwargs=task_kwargs, queue=self.queue_name)
+
