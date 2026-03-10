@@ -597,7 +597,7 @@ Pull requests are welcome. For major changes, please open an issue first to disc
 ### Development Setup
 1. Clone the repository
 2. Create a virtual environment: `python -m venv venv`
-3. Install dependencies: `pip install -r requirements.txt`
+3. Install dependencies: `pip install -e .`
 4. Run tests: `python tests/manage.py test`
 
 Please make sure to:
