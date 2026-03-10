@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y \
 
 # Copy project and install
 COPY . .
-RUN pip install --no-cache-dir -e .
+RUN pip install --no-cache-dir -e . coverage
 
 # Disable bytecode compilation
 ENV PYTHONDONTWRITEBYTECODE=1

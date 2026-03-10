@@ -49,3 +49,10 @@ exclude = ["tests*", "demo*"]
 
 [tool.setuptools]
 zip-safe = false
+
+[tool.coverage.run]
+source = ["django_logic"]
+
+[tool.coverage.report]
+show_missing = true
+skip_empty = true

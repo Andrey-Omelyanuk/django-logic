@@ -12,6 +12,8 @@ test:
 	docker run -p 8000:8000 -v $(PWD):/app $(PROJECT_NAME) python tests/manage.py test
 test-one:
 	docker run -p 8000:8000 -v $(PWD):/app $(PROJECT_NAME) python tests/manage.py test $(t)
+coverage:
+	docker run -p 8000:8000 -v $(PWD):/app $(PROJECT_NAME) sh -c "coverage run ./tests/manage.py test && coverage report && coverage html"
 sh:
 	docker run -p 8000:8000 -v $(PWD):/app $(PROJECT_NAME) python tests/manage.py shell
 sss:
