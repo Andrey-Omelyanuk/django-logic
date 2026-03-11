@@ -66,7 +66,6 @@ class TransitionLoggingTestCase(TestCase):
         )
         state = State(self.invoice, 'status')
 
-        # should not raise for root transition
         # with self.assertRaises(Exception):
         transition.change_state(state)
 
@@ -88,7 +87,6 @@ class TransitionLoggingTestCase(TestCase):
         )
         state = State(self.invoice, 'status')
 
-        # should not raise for root transition
         # with self.assertRaises(Exception):
         transition.change_state(state)
 
@@ -142,7 +140,6 @@ class TransitionLoggingTestCase(TestCase):
         )
         state = State(self.invoice, 'status')
 
-        # should not raise for root transition
         # with self.assertRaises(Exception):
         transition.change_state(state)
 
@@ -270,7 +267,6 @@ class ActionLoggingTestCase(TestCase):
         )
         state = State(self.invoice, 'status')
 
-        # should not raise for root transition
         # with self.assertRaises(Exception):
         action.change_state(state)
 
@@ -291,7 +287,6 @@ class ActionLoggingTestCase(TestCase):
         )
         state = State(self.invoice, 'status')
 
-        # should not raise for root transition
         # with self.assertRaises(Exception):
         action.change_state(state)
 
