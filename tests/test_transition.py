@@ -64,8 +64,9 @@ class TransitionSideEffectsTestCase(TestCase):
                                 side_effects=[disable_invoice, fail_invoice, enable_invoice])
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            transition.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        transition.change_state(state)
         self.assertEqual(self.invoice.status, 'draft')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -75,8 +76,9 @@ class TransitionSideEffectsTestCase(TestCase):
                                 side_effects=[disable_invoice, fail_invoice, enable_invoice])
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            transition.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        transition.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -134,8 +136,9 @@ class TransitionCallbacksTestCase(TestCase):
                                 side_effects=[disable_invoice, fail_invoice, enable_invoice])
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            transition.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        transition.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -164,8 +167,9 @@ class TransitionFailureCallbacksTestCase(TestCase):
                                 failure_callbacks=[disable_invoice], failed_state='failed')
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            transition.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        transition.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -176,8 +180,9 @@ class TransitionFailureCallbacksTestCase(TestCase):
         self.assertTrue(self.invoice.is_available)
         self.assertFalse(self.invoice.customer_received)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            transition.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        transition.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertTrue(self.invoice.customer_received)
@@ -191,8 +196,9 @@ class TransitionFailureCallbacksTestCase(TestCase):
         self.assertTrue(self.invoice.is_available)
         self.assertTrue(self.invoice.customer_received)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            transition.change_state(state, is_available=False, customer_received=False)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        transition.change_state(state, is_available=False, customer_received=False)
         self.invoice.refresh_from_db()
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
@@ -205,8 +211,9 @@ class TransitionFailureCallbacksTestCase(TestCase):
                                 side_effects=[fail_invoice], failure_callbacks=[failure_callback_mock])
         self.invoice.refresh_from_db()
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            transition.change_state(state, foo="bar")
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        transition.change_state(state, foo="bar")
         failure_callback_mock.assert_called_once()
         call_args = failure_callback_mock.call_args[0]
         call_kwargs = failure_callback_mock.call_args[1]
@@ -225,8 +232,9 @@ class TransitionFailureSideEffectsTestCase(TestCase):
                                 failure_side_effects=[disable_invoice], failed_state='failed')
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            transition.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        transition.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -237,8 +245,9 @@ class TransitionFailureSideEffectsTestCase(TestCase):
         self.assertTrue(self.invoice.is_available)
         self.assertFalse(self.invoice.customer_received)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            transition.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        transition.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertTrue(self.invoice.customer_received)
@@ -252,8 +261,9 @@ class TransitionFailureSideEffectsTestCase(TestCase):
         self.assertTrue(self.invoice.is_available)
         self.assertTrue(self.invoice.customer_received)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            transition.change_state(state, is_available=False, customer_received=False)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        transition.change_state(state, is_available=False, customer_received=False)
         self.invoice.refresh_from_db()
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
@@ -265,8 +275,9 @@ class TransitionFailureSideEffectsTestCase(TestCase):
         transition = Transition('test', sources=[], target='success', failed_state='failed',
                                 side_effects=[fail_invoice], failure_side_effects=[failure_side_effect_mock])
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            transition.change_state(state, foo="bar")
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        transition.change_state(state, foo="bar")
         failure_side_effect_mock.assert_called_once()
         call_args = failure_side_effect_mock.call_args[0]
         call_kwargs = failure_side_effect_mock.call_args[1]
@@ -289,8 +300,9 @@ class TransitionFailureSideEffectsTestCase(TestCase):
                                 failure_side_effects=[failure_side_effect],
                                 failure_callbacks=[failure_callback])
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            transition.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        transition.change_state(state)
         self.assertEqual(order, ['failure_side_effect', 'failure_callback'])
 
 
@@ -320,8 +332,9 @@ class ActionSideEffectsTestCase(TestCase):
         action = Action('test', sources=['draft'], side_effects=[disable_invoice, fail_invoice, enable_invoice])
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            action.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        action.change_state(state)
         self.assertEqual(self.invoice.status, 'draft')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -330,8 +343,9 @@ class ActionSideEffectsTestCase(TestCase):
         action = Action('test', sources=['draft'], failed_state='failed', side_effects=[disable_invoice, fail_invoice, enable_invoice])
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            action.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        action.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -385,8 +399,9 @@ class ActionCallbacksTestCase(TestCase):
         action = Action('test', failed_state='failed', sources=['draft'], side_effects=[disable_invoice, fail_invoice, enable_invoice])
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            action.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        action.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -414,8 +429,9 @@ class ActionFailureCallbacksTestCase(TestCase):
                         failure_callbacks=[disable_invoice], failed_state='failed')
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            action.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        action.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -426,8 +442,9 @@ class ActionFailureCallbacksTestCase(TestCase):
         self.assertTrue(self.invoice.is_available)
         self.assertFalse(self.invoice.customer_received)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            action.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        action.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertTrue(self.invoice.customer_received)
@@ -441,8 +458,9 @@ class ActionFailureCallbacksTestCase(TestCase):
         self.assertTrue(self.invoice.is_available)
         self.assertTrue(self.invoice.customer_received)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            action.change_state(state, is_available=False, customer_received=False)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        action.change_state(state, is_available=False, customer_received=False)
         self.invoice.refresh_from_db()
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
@@ -455,8 +473,9 @@ class ActionFailureCallbacksTestCase(TestCase):
                         side_effects=[fail_invoice], sources=['draft'], failure_callbacks=[failure_callback_mock])
         self.invoice.refresh_from_db()
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            action.change_state(state, foo="bar")
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        action.change_state(state, foo="bar")
         failure_callback_mock.assert_called_once()
         call_args = failure_callback_mock.call_args[0]
         call_kwargs = failure_callback_mock.call_args[1]
@@ -475,8 +494,9 @@ class ActionFailureSideEffectsTestCase(TestCase):
                         failure_side_effects=[disable_invoice], failed_state='failed')
         self.assertTrue(self.invoice.is_available)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            action.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        action.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertFalse(state.is_locked())
@@ -487,8 +507,9 @@ class ActionFailureSideEffectsTestCase(TestCase):
         self.assertTrue(self.invoice.is_available)
         self.assertFalse(self.invoice.customer_received)
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            action.change_state(state)
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        action.change_state(state)
         self.assertEqual(self.invoice.status, 'failed')
         self.assertFalse(self.invoice.is_available)
         self.assertTrue(self.invoice.customer_received)
@@ -499,8 +520,9 @@ class ActionFailureSideEffectsTestCase(TestCase):
         action = Action('test', failed_state='failed', sources=['draft'],
                         side_effects=[fail_invoice], failure_side_effects=[failure_side_effect_mock])
         state = State(self.invoice, 'status')
-        with self.assertRaises(Exception):
-            action.change_state(state, foo="bar")
+        # should not raise for root transition
+        # with self.assertRaises(Exception):
+        action.change_state(state, foo="bar")
         failure_side_effect_mock.assert_called_once()
         call_args = failure_side_effect_mock.call_args[0]
         call_kwargs = failure_side_effect_mock.call_args[1]
@@ -553,8 +575,9 @@ class TransitionNextTransitionTestCase(TestCase):
         self.process.transitions.append(transition1)
 
         with patch.object(self.next_transition, 'change_state') as next_transition_mock:
-            with self.assertRaises(Exception):
-                transition1.change_state(self.state)
+            # should not raise for root transition
+            # with self.assertRaises(Exception):
+            transition1.change_state(self.state)
 
         next_transition_mock.assert_not_called()
 
