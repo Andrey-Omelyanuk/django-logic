@@ -282,8 +282,12 @@ class Action(Transition):
         :param state: State object
         """
         # TODO: UUID for actions?
-        self._init_transition_context(kwargs)
-        self.side_effects.execute(state, **kwargs)
+        try:
+            self._init_transition_context(kwargs)
+            self.side_effects.execute(state, **kwargs)
+        except Exception as e:
+            if kwargs.get('root_id') != kwargs.get('tr_id'):
+                raise e
 
     def complete_transition(self, state: State, **kwargs):
         """
