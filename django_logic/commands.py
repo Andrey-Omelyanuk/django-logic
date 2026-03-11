@@ -71,8 +71,8 @@ class SideEffects(BaseCommand):
             self._transition.fail_transition(state, error, **kwargs)
             # Re-raise the exception to propagate to parent transitions
             # We need this for backward compatibility with the old code for now
-            if kwargs.get('root_id') != kwargs.get('tr_id'):
-                raise
+            # if kwargs.get('root_id') != kwargs.get('tr_id'):
+            #     raise
         else:
             # DEPRECATED
             self.logger.info(f"{state.instance_key} side-effects of '{self._transition.action_name}' succeeded",
