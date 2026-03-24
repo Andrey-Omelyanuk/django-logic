@@ -74,15 +74,37 @@ class State(object):
 
 class RedisState(State):
     """
-    RedisState implements the optimistic locking of the state
-    and guarantees to be locked only once.
-    Basically, it provides a solution to the race conditions problem for the state
-    being available in parallel execution of a transition.
+    RedisState uses a single Redis key for both locking and state storage.
+
+    The key's existence means the state is locked; its value is the current
+    state. This makes the state immediately visible to all processes
+    regardless of DB transaction isolation.
+
+    lock()      → atomically creates the key with the current state (nx=True)
+    set_state() → overwrites the key value with the new state + persists to DB
+    get_state() → reads from the key (fallback to instance attr when unlocked)
+    unlock()    → deletes the key; DB is the source of truth again
     """
+
     def lock(self):
-        """
-        It locks the state only once for 3 years.
-        nx - sets the value only once, if it was set up before it guarantees to return False.
-        It returns True if it's been locked and False otherwise.
-        """
-        return cache.set(self._get_hash(), True, 99999999, nx=True) or False
+        current = super().get_state()
+        return cache.set(self._get_hash(), current, 99999999, nx=True) or False
+
+    def is_locked(self):
+        return cache.get(self._get_hash()) is not None
+
+    def set_state(self, state):
+        cache.set(self._get_hash(), state, 99999999)
+        super().set_state(state)
+
+    def get_state(self):
+        cached = cache.get(self._get_hash())
+        if cached is not None:
+            return cached
+        return super().get_state()
+
+    def get_db_state(self):
+        cached = cache.get(self._get_hash())
+        if cached is not None:
+            return cached
+        return super().get_db_state()

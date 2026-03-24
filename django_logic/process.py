@@ -81,7 +81,7 @@ class Process(object):
         transition = self.get_transition_by_action_name(action_name, user)
         # DEPRECATED
         self.logger.info(f"{self.state.instance_key}, process {self.process_name} "
-                            f"executes '{action_name}' transition from {getattr(self.state.instance, self.state.field_name)} "
+                            f"executes '{action_name}' transition from {self.state.get_state()} "
                             f"to {transition.target}",
                             log_type=LogType.TRANSITION_DEBUG,
                             log_data=self.state.get_log_data())
@@ -89,7 +89,7 @@ class Process(object):
         tr_id = uuid.uuid4()
         logger.info(
             f"{tr_id} {self.state.instance_key}, process {self.process_name} "
-            f"executes '{action_name}' transition from {getattr(self.state.instance, self.state.field_name)} "
+            f"executes '{action_name}' transition from {self.state.get_state()} "
             f"to {transition.target}  "
         )
         kwargs['root_id'] = kwargs.get('root_id', tr_id)
@@ -166,7 +166,7 @@ class Process(object):
             if action_name is not None and transition.action_name != action_name:
                 continue
 
-            if getattr(self.state.instance, self.state.field_name) in transition.sources and transition.is_valid(self.state.instance, user):
+            if self.state.get_state() in transition.sources and transition.is_valid(self.state.instance, user):
                 yield transition
 
         for sub_process_class in self.nested_processes:
