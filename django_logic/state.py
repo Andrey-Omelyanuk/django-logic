@@ -1,6 +1,9 @@
 from hashlib import blake2b
+from django.conf import settings
 from django.core.cache import cache
 from django.utils.functional import cached_property
+
+LOCK_TIMEOUT = getattr(settings, 'DJANGO_LOGIC', {}).get('LOCK_TIMEOUT', 600)
 
 
 class State(object):
@@ -54,7 +57,7 @@ class State(object):
         It locks the state for 3 years.
         It returns True if it's been locked and False otherwise.
         """
-        cache.set(self._get_hash(), True, 99999999)
+        cache.set(self._get_hash(), True, LOCK_TIMEOUT)
         return True
 
     def unlock(self):
@@ -82,19 +85,24 @@ class RedisState(State):
 
     lock()      → atomically creates the key with the current state (nx=True)
     set_state() → overwrites the key value with the new state + persists to DB
+                  (resets TTL so the lock stays alive while making progress)
     get_state() → reads from the key (fallback to instance attr when unlocked)
     unlock()    → deletes the key; DB is the source of truth again
+
+    If the process crashes without calling unlock(), the key expires
+    after lock_timeout seconds and the state becomes available again.
     """
+    lock_timeout = LOCK_TIMEOUT
 
     def lock(self):
         current = super().get_state()
-        return cache.set(self._get_hash(), current, 99999999, nx=True) or False
+        return cache.set(self._get_hash(), current, self.lock_timeout, nx=True) or False
 
     def is_locked(self):
         return cache.get(self._get_hash()) is not None
 
     def set_state(self, state):
-        cache.set(self._get_hash(), state, 99999999)
+        cache.set(self._get_hash(), state, self.lock_timeout)
         super().set_state(state)
 
     def get_state(self):
