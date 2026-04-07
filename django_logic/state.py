@@ -3,7 +3,7 @@ from django.conf import settings
 from django.core.cache import cache
 from django.utils.functional import cached_property
 
-LOCK_TIMEOUT = getattr(settings, 'DJANGO_LOGIC', {}).get('LOCK_TIMEOUT', 600)
+LOCK_TIMEOUT = getattr(settings, 'DJANGO_LOGIC', {}).get('LOCK_TIMEOUT', 7200)  # 2 hours by default
 
 
 class State(object):
