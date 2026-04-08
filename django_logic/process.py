@@ -148,12 +148,15 @@ class Process(object):
         return sorted(set([transition.action_name for transition in
                            self.get_available_transitions(user, action_name)]))
 
-    def get_available_transitions(self, user=None, action_name=None, ignore_state=False):
+    def get_available_transitions(self, user=None, action_name=None, ignore_state=False, ignore_sources=False):
         """
         It returns all available transition which meet conditions and pass permissions.
         Including nested processes.
         :param user: any object which is used to validate permissions
         :param action_name: str
+        :param ignore_state: skip the is_locked check (used internally by get_transition_by_action_name)
+        :param ignore_sources: skip the source-state membership check, e.g. when
+               the state has already been moved to in_progress_state by background mode phase 1
         :return: yield `django_logic.Transition`
         """
         if not self.is_valid(user):
@@ -166,15 +169,17 @@ class Process(object):
             if action_name is not None and transition.action_name != action_name:
                 continue
 
-            if self.state.get_state() in transition.sources and transition.is_valid(self.state.instance, user):
+            if (ignore_sources or self.state.get_state() in transition.sources) and transition.is_valid(self.state.instance, user):
                 yield transition
 
         for sub_process_class in self.nested_processes:
             sub_process = sub_process_class(state=self.state)
-            yield from sub_process.get_available_transitions(user=user, action_name=action_name, ignore_state=ignore_state)
+            yield from sub_process.get_available_transitions(user=user, action_name=action_name,
+                                                             ignore_state=ignore_state, ignore_sources=ignore_sources)
 
-    def get_transition_by_action_name(self, action_name: str, user=None):
-        transitions = list(self.get_available_transitions(action_name=action_name, user=user, ignore_state=True))
+    def get_transition_by_action_name(self, action_name: str, user=None, ignore_sources=False):
+        transitions = list(self.get_available_transitions(action_name=action_name, user=user,
+                                                          ignore_state=True, ignore_sources=ignore_sources))
         if len(transitions) == 1:
             transition = transitions[0]
             # DEPRECATED
