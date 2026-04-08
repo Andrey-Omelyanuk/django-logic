@@ -16,6 +16,7 @@ Django Logic is a lightweight workflow framework for Django that makes it easy t
 - [Complete Example](#complete-example)
 - [Display Process](#display-process)
 - [Django-Logic vs Django FSM](#django-logic-vs-django-fsm)
+- [Background Mode & Celery Integration](#background-mode--celery-integration)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -29,9 +30,10 @@ Django Logic is a lightweight workflow framework for Django that makes it easy t
 - 🔍 **Comprehensive Logging** - Track all state changes
 
 ## Requirements
-- Python 3.6+
-- Django 2.0+
-- django-model-utils 4.5.1
+- Python 3.11+
+- Django 4.0+
+- django-model-utils >= 4.5.1
+- djangorestframework >= 3.14.0
 
 ## Installation
 
@@ -593,14 +595,102 @@ Transition(
 )
 ```
 
+## Background Mode & Celery Integration
+
+Long-running side effects (payment processing, PDF generation, external API calls) can block the request/response cycle. Django-Logic provides two approaches to offload work to background workers.
+
+### Background Mode (built-in)
+
+Background mode runs the **entire transition** in a background worker using a two-phase protocol:
+
+1. **Phase 1** (web process): lock the state, set `in_progress_state` (if configured), dispatch task to the message broker.
+2. **Phase 2** (worker process): execute side effects, complete or fail the transition. The lock acquired in Phase 1 is reused (not re-acquired).
+
+Only the **root transition** can be run in background. Nested transitions triggered by `next_transition` or callbacks always run inline.
+
+To enable background mode, subclass `Transition` and override `run_in_background()`:
+
+```python
+from celery import shared_task
+from django_logic import Transition
+from django_logic.utils import restore_action, restore_user_object
+
+
+@shared_task(acks_late=True)
+def run_transition_task(**task_kwargs):
+    """Celery task that executes Phase 2 of a background transition."""
+    restore_user_object(task_kwargs)
+    user = task_kwargs.pop('user', None)
+    process, transition = restore_action(
+        app_label=task_kwargs['app_label'],
+        model_name=task_kwargs['model_name'],
+        instance_id=task_kwargs['instance_id'],
+        field_name=task_kwargs['field_name'],
+        process_class=task_kwargs['process_class'],
+        action_name=task_kwargs['action_name'],
+        user=user,
+    )
+    transition.change_state(
+        process.state,
+        background_mode_phase_2=True,
+        user=user,
+        **{k: task_kwargs[k] for k in ('tr_id', 'root_id', 'parent_id', 'process_class') if k in task_kwargs},
+    )
+
+
+class BackgroundTransition(Transition):
+    def run_in_background(self, state, **kwargs):
+        task_kwargs = self.get_task_kwargs(state, **kwargs)
+        run_transition_task.delay(**task_kwargs)
+```
+
+Then use `BackgroundTransition` in your process and pass `background_mode=True` when calling the action:
+
+```python
+class OrderProcess(Process):
+    transitions = [
+        BackgroundTransition(
+            action_name='pay',
+            sources=['pending'],
+            target='paid',
+            in_progress_state='processing',
+            failed_state='payment_failed',
+            side_effects=[process_payment, send_receipt],
+            callbacks=[send_confirmation_email],
+        ),
+    ]
+
+# In your view — returns immediately after locking
+order.order_process.pay(user=request.user, background_mode=True)
+```
+
+The call returns a `tr_id` (UUID) immediately. The state moves to `processing` while the worker executes side effects. On success it becomes `paid`; on failure — `payment_failed`.
+
+> **Tip:** Use `RedisState` with background mode to make state changes immediately visible across processes, regardless of DB transaction isolation.
+
 ## Contributing
 Pull requests are welcome. For major changes, please open an issue first to discuss what you would like to change.
 
 ### Development Setup
+
+#### Option A: Local
+
 1. Clone the repository
 2. Create a virtual environment: `python -m venv venv`
 3. Install dependencies: `pip install -e .`
 4. Run tests: `python tests/manage.py test`
+
+#### Option B: Docker + Make
+
+The project includes a `Dockerfile` and a `makefile` so you can develop without installing anything locally.
+
+```bash
+make build          # build the Docker image
+make test           # run the full test suite
+make test t=tests.test_transition  # run a specific test module
+make coverage       # run tests with coverage report
+make sh             # open a Django shell inside the container
+```
 
 Please make sure to:
 - Add tests for new features
