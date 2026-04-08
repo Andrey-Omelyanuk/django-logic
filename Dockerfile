@@ -2,19 +2,16 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy project and install
-COPY . .
-RUN pip install --no-cache-dir -e . coverage
-
-# Disable bytecode compilation
 ENV PYTHONDONTWRITEBYTECODE=1
-# Unbuffer stdout and stderr
 ENV PYTHONUNBUFFERED=1
-# Set default command
-CMD ["python", "tests/manage.py", "runserver", "0.0.0.0:8000"]
 
+# Install dependencies first (cached unless pyproject.toml changes)
+COPY pyproject.toml README.md ./
+RUN mkdir -p django_logic && touch django_logic/__init__.py && \
+    pip install --no-cache-dir -e ".[dev]" && \
+    rm -rf django_logic
+
+COPY . .
+RUN pip install --no-cache-dir -e ".[dev]"
+
+CMD ["python", "tests/manage.py", "runserver", "0.0.0.0:8000"]

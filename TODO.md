@@ -29,3 +29,6 @@ Planned changes for upcoming versions of django-logic.
 
 ### PyPI
 - [ ] Set up automated publishing via GitHub Actions (on tag push)
+
+### Demo
+- [ ] Move demo to `django-logic-demo` repo
