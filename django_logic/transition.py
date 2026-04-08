@@ -150,7 +150,16 @@ class Transition(BaseTransition):
         and not kwargs.get('background_mode_phase_2', False) \
         and kwargs.get('root_id') == kwargs.get('tr_id'): 
             transition_logger.info(f'{kwargs.get("tr_id")} {TransitionEventType.BACKGROUND_MODE.value}')
-            self.run_in_background(state, **kwargs)
+            try:
+                self.run_in_background(state, **kwargs)
+            except Exception as e:
+                transition_logger.error(
+                    f"{kwargs.get('tr_id')} {TransitionEventType.FAIL.value}: "
+                    f"run_in_background failed: {type(e).__name__}: {e}",
+                    exc_info=True,
+                )
+                self.fail_transition(state, e, **kwargs)
+                raise
         else:
             self._init_transition_context(kwargs)
             try:

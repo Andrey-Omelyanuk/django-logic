@@ -134,6 +134,8 @@ class NextTransition(object):
     def __init__(self, next_transition: str = None):
         self._next_transition = next_transition
 
+    _BACKGROUND_MODE_KEYS = frozenset(('background_mode', 'background_mode_phase_2'))
+
     def execute(self, state: State, **kwargs):
         if not self._next_transition:
             return
@@ -145,8 +147,9 @@ class NextTransition(object):
             return None
 
         transition = transitions[0]
+        next_kwargs = {k: v for k, v in kwargs.items() if k not in self._BACKGROUND_MODE_KEYS}
         try:
-            return transition.change_state(state, **kwargs)
+            return transition.change_state(state, **next_kwargs)
         except Exception as error:
             # Ignore any errors in the next transition, 
             # it should not impact the main transition execution
